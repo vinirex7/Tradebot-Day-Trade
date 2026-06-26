@@ -1,0 +1,9 @@
+*.ex5
+*.log
+*.ini
+*.bak
+*.tmp
+.vscode/
+.idea/
+MQL5/Logs/*
+MQL5/Files/Tradebot_Logs/*

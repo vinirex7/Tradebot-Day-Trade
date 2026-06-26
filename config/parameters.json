@@ -1,0 +1,20 @@
+{
+  "strategy_name": "Regime-Switching WIN/WDO",
+  "version": "1.0.0",
+  "symbols": ["WIN", "WDO"],
+  "timeframe": "M5",
+  "risk_params": {
+    "daily_loss_limit": 0.02,
+    "risk_per_trade": 0.005,
+    "max_drawdown": 0.10
+  },
+  "indicators": {
+    "adx_period": 14,
+    "adx_threshold": 25,
+    "bb_period": 20,
+    "bb_deviation": 2.5,
+    "rsi_period": 2,
+    "ema_period": 20,
+    "atr_period": 14
+  }
+}
