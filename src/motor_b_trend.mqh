@@ -9,6 +9,7 @@
 #include "../config/config.mqh"
 #include "risk_manager.mqh"
 #include "order_executor.mqh"
+#include "symbol_specs.mqh"
 
 class CMotorBTrend
 {
@@ -21,7 +22,7 @@ public:
       m_ema_period = ema_period;
    }
 
-   void Execute(const string symbol, CRiskManager &risk, COrderExecutor &executor)
+   void Execute(const string symbol, CRiskManager &risk, COrderExecutor &executor, CSymbolSpecs &specs)
    {
       if(executor.HasOpenPosition(symbol))
          return;
@@ -46,11 +47,11 @@ public:
       double close_0 = iClose(symbol, PERIOD_CURRENT, 0);
       double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
       double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
-      int digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+      int digits = specs.Digits();
 
       double stop_distance = atr[0] * InpATRStopMultiplier;
-      double stop_points = stop_distance / SymbolInfoDouble(symbol, SYMBOL_POINT);
-      double lot = risk.CalculateLot(symbol, stop_points);
+      double stop_points = stop_distance / specs.Point();
+      double lot = risk.CalculateLot(symbol, stop_points, specs);
 
       bool bullish_pullback = close_1 > ema[1] && close_0 <= ema[0] + atr[0] * 0.25 && close_0 >= ema[0] - atr[0] * 0.50;
       bool bearish_pullback = close_1 < ema[1] && close_0 >= ema[0] - atr[0] * 0.25 && close_0 <= ema[0] + atr[0] * 0.50;
@@ -59,13 +60,15 @@ public:
       {
          double sl = NormalizeDouble(ask - stop_distance, digits);
          double tp = NormalizeDouble(ask + stop_distance * 2.0, digits);
-         executor.Buy(symbol, lot, sl, tp, "MotorB_Trend_Buy");
+         if(executor.Buy(symbol, lot, sl, tp, "MotorB_Trend_Buy"))
+            risk.RegisterTrade();
       }
       else if(bearish_pullback)
       {
          double sl = NormalizeDouble(bid + stop_distance, digits);
          double tp = NormalizeDouble(bid - stop_distance * 2.0, digits);
-         executor.Sell(symbol, lot, sl, tp, "MotorB_Trend_Sell");
+         if(executor.Sell(symbol, lot, sl, tp, "MotorB_Trend_Sell"))
+            risk.RegisterTrade();
       }
    }
 };

@@ -14,12 +14,26 @@ enum ENUM_MARKET_REGIME
    REGIME_UNKNOWN = 2
 };
 
+enum ENUM_TRADEBOT_ASSET
+{
+   ASSET_AUTO = 0,
+   ASSET_WIN  = 1,
+   ASSET_WDO  = 2,
+   ASSET_OTHER = 3
+};
+
+input group "--- Simbolo / Contrato ---"
+input ENUM_TRADEBOT_ASSET InpAssetType = ASSET_AUTO;     // Auto detecta WIN/WDO pelo nome do simbolo
+input bool   InpAutoContractSpecs      = true;           // Usa tick value, tick size, lote min e step do MT5
+input double InpManualPointValue       = 0.20;           // Fallback se o MT5 nao retornar dados do simbolo
+input bool   InpAllowAnySymbol         = true;           // true permite WINQ26, WIN$, WDOQ26, WDO$, nomes da corretora etc.
+
 input group "--- Risco ---"
 input double InpMaxDailyLossPercent   = 2.0;
 input double InpRiskPerTradePercent   = 0.5;
 input double InpTargetDailyProfit     = 4.0;
-input double InpPointValue            = 0.20;  // Ajustar conforme WIN/WDO/corretora
 input int    InpMagicNumber           = 26062026;
+input int    InpMaxTradesPerDay       = 8;
 
 input group "--- Classificador de Regime ---"
 input int    InpADXPeriod             = 14;
@@ -39,9 +53,10 @@ input int    InpATRPeriod             = 14;
 input double InpATRStopMultiplier     = 2.0;
 input double InpATRTrailMultiplier    = 1.5;
 
-input group "--- Horarios ---"
+input group "--- Horarios no servidor da corretora ---"
 input string InpStartTime             = "09:30";
 input string InpEndTime               = "16:30";
 input string InpCloseAllTime          = "17:00";
+input bool   InpLogServerTimeOnInit   = true;
 
 #endif

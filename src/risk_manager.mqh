@@ -7,12 +7,14 @@
 #define __TRADEBOT_RISK_MANAGER_MQH__
 
 #include "../config/config.mqh"
+#include "symbol_specs.mqh"
 
 class CRiskManager
 {
 private:
    double m_day_start_equity;
    int    m_day_of_year;
+   int    m_trades_today;
 
    int MinutesFromString(const string hhmm)
    {
@@ -29,6 +31,7 @@ public:
       TimeToStruct(TimeCurrent(), dt);
       m_day_of_year = dt.day_of_year;
       m_day_start_equity = AccountInfoDouble(ACCOUNT_EQUITY);
+      m_trades_today = 0;
    }
 
    void RefreshDay()
@@ -39,6 +42,7 @@ public:
       {
          m_day_of_year = dt.day_of_year;
          m_day_start_equity = AccountInfoDouble(ACCOUNT_EQUITY);
+         m_trades_today = 0;
       }
    }
 
@@ -79,27 +83,39 @@ public:
       return gain_pct >= InpTargetDailyProfit;
    }
 
-   bool IsTradingAllowed()
+   bool HasTradeLimit()
    {
-      return IsInsideTradingWindow() && !CheckDailyStop() && !CheckDailyTarget();
+      return InpMaxTradesPerDay > 0 && m_trades_today >= InpMaxTradesPerDay;
    }
 
-   double CalculateLot(const string symbol, const double stop_points)
+   void RegisterTrade()
+   {
+      m_trades_today++;
+   }
+
+   bool IsTradingAllowed()
+   {
+      return IsInsideTradingWindow() && !CheckDailyStop() && !CheckDailyTarget() && !HasTradeLimit();
+   }
+
+   double NormalizeVolume(const double lots, CSymbolSpecs &specs)
+   {
+      double step = specs.VolumeStep();
+      double normalized = lots;
+      if(step > 0.0)
+         normalized = MathFloor(lots / step) * step;
+
+      normalized = MathMax(specs.VolumeMin(), MathMin(specs.VolumeMax(), normalized));
+      return NormalizeDouble(normalized, 2);
+   }
+
+   double CalculateLot(const string symbol, const double stop_points, CSymbolSpecs &specs)
    {
       double equity = AccountInfoDouble(ACCOUNT_EQUITY);
       double risk_money = equity * (InpRiskPerTradePercent / 100.0);
-      double denominator = MathMax(stop_points * InpPointValue, 1.0);
+      double denominator = MathMax(stop_points * specs.PointValue(), 1.0);
       double lots = MathFloor(risk_money / denominator);
-
-      double min_lot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
-      double max_lot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
-      double step    = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
-
-      lots = MathMax(min_lot, MathMin(max_lot, lots));
-      if(step > 0.0)
-         lots = MathFloor(lots / step) * step;
-
-      return NormalizeDouble(lots, 2);
+      return NormalizeVolume(lots, specs);
    }
 };
 

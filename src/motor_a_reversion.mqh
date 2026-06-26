@@ -9,6 +9,7 @@
 #include "../config/config.mqh"
 #include "risk_manager.mqh"
 #include "order_executor.mqh"
+#include "symbol_specs.mqh"
 
 class CMotorAReversion
 {
@@ -25,7 +26,7 @@ public:
       m_rsi_period = rsi_period;
    }
 
-   void Execute(const string symbol, CRiskManager &risk, COrderExecutor &executor)
+   void Execute(const string symbol, CRiskManager &risk, COrderExecutor &executor, CSymbolSpecs &specs)
    {
       if(executor.HasOpenPosition(symbol))
          return;
@@ -59,22 +60,24 @@ public:
 
       double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
       double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
-      int digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+      int digits = specs.Digits();
       double stop_distance = atr[0] * InpATRStopMultiplier;
-      double stop_points = stop_distance / SymbolInfoDouble(symbol, SYMBOL_POINT);
-      double lot = risk.CalculateLot(symbol, stop_points);
+      double stop_points = stop_distance / specs.Point();
+      double lot = risk.CalculateLot(symbol, stop_points, specs);
 
       if(bid <= lower[0] && rsi[0] <= InpRSIOversold)
       {
          double sl = NormalizeDouble(ask - stop_distance, digits);
          double tp = NormalizeDouble(middle[0], digits);
-         executor.Buy(symbol, lot, sl, tp, "MotorA_Reversion_Buy");
+         if(executor.Buy(symbol, lot, sl, tp, "MotorA_Reversion_Buy"))
+            risk.RegisterTrade();
       }
       else if(ask >= upper[0] && rsi[0] >= InpRSIOverbought)
       {
          double sl = NormalizeDouble(bid + stop_distance, digits);
          double tp = NormalizeDouble(middle[0], digits);
-         executor.Sell(symbol, lot, sl, tp, "MotorA_Reversion_Sell");
+         if(executor.Sell(symbol, lot, sl, tp, "MotorA_Reversion_Sell"))
+            risk.RegisterTrade();
       }
    }
 };
